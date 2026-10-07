@@ -1,10 +1,13 @@
 # LoL Team Analysis
 
-[![CI](https://github.com/ConnorMSun/LoL-Team-Analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/ConnorMSun/LoL-Team-Analysis/actions/workflows/ci.yml)
+[![CI](https://github.com/ConnorMSun/LoL-Team-Analysis-PUBLIC/actions/workflows/ci.yml/badge.svg)](https://github.com/ConnorMSun/LoL-Team-Analysis-PUBLIC/actions/workflows/ci.yml)
 
 LoL Team Analysis is a C++20 command-line tool for recording League of Legends drafts and exploring
 team, player, champion, and matchup trends. It understands tournament draft order, Full Fearless
 rules, flex picks, roster changes, and side swaps.
+
+Import drafts from plain-text files and query your own match data locally. Records are stored in a
+SQLite database; no hosted service or account is required.
 
 Current version: **0.4.2**
 
@@ -21,17 +24,35 @@ are resolved. This preserves general draft data while supporting lane and player
 
 ## Install
 
-You need CMake 3.24+, a C++20 compiler, and SQLite 3 development files.
+You need Git, CMake 3.24+, a C++20 compiler, and SQLite 3 development files. The installation script
+is intended for macOS and Linux.
 
 ```sh
+git clone https://github.com/ConnorMSun/LoL-Team-Analysis-PUBLIC.git
+cd LoL-Team-Analysis-PUBLIC
 ./scripts/install.sh --add-to-path
 ```
 
-Open a new terminal and run `lolctl` from any directory. The default install location is
-`~/.local/bin`. See [Amendment 0004](docs/amendments/0004-cli-installation/README.md) for other
-options.
+The script builds a release binary and installs it to `~/.local/bin`. With `--add-to-path`, it adds
+that directory to your Bash or Zsh configuration if needed. Open a new terminal, then check the
+installation:
+
+```sh
+lolctl --version
+lolctl help
+```
+
+For a different installation location, use `./scripts/install.sh --prefix /your/install/prefix`.
+The binary is installed under that prefix's `bin` directory, which must be on your `PATH`.
 
 ## A typical workflow
+
+Run these examples from the cloned repository so `examples/format.csv` is available. Select a
+database for this directory and its descendants:
+
+```sh
+lolctl db use tournament.sqlite
+```
 
 Create a series. ELO values are `lowest,highest,average`:
 
@@ -39,8 +60,12 @@ Create a series. ELO values are `lowest,highest,average`:
 lolctl series add NCK SKY --patch 26.15 --elo 1200,1800,1512.5
 ```
 
-Import the next game from a 20-line champion list. Team `a` is blue and won; red and the game number
-are inferred:
+The command prints the new series ID. The examples below assume series ID `1` and game ID `1`;
+substitute the IDs returned by your commands if the database already contains records.
+
+Import the next game from the [sample draft](examples/format.csv). Despite its `.csv` extension,
+the file contains exactly 20 champion names, one per line, in chronological ban/pick order, with
+no header. Team `a` (`NCK`) is blue and won; red and the game number are inferred:
 
 ```sh
 lolctl game add 1 examples/format.csv --blue a --winner a
@@ -98,7 +123,8 @@ lolctl stats NCK --bans 'Poppy,Ashe,!Jinx'
 In a ban list, `!Jinx` means Jinx was not banned by either side. Quote expressions containing `!` so
 your shell passes them through unchanged.
 
-Results include the matching record and champion associations:
+Results include the matching record and champion associations. For example, a database with
+multiple games might produce:
 
 ```text
 Summary
@@ -156,8 +182,6 @@ The code has three layers:
 
 The application layer talks to a `Repository` interface rather than SQLite. Draft actions, final
 roles, and player lineups are separate facts, so correcting one does not rewrite the others.
-
-Version-by-version design notes live in the [amendment index](docs/amendments/README.md).
 
 ## License
 
